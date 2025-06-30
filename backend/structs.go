@@ -5,7 +5,6 @@ type Config struct {
 	Config  struct {
 		MaxServers int `yaml:"maxServers"`
 	} `yaml:"config"`
-	Defaults ServerConfig `yaml:"defaults"`
 }
 
 type ServerConfig struct {

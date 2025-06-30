@@ -106,3 +106,33 @@ func SaveState() {
 		return
 	}
 }
+
+func ValidateConfig(config Config) error {
+	// validate that time strings are correct
+	for name, server := range config.Servers {
+		_, err := DecodeTime(server.InitialTTL)
+		if err != nil {
+			return fmt.Errorf("Invalid InitialTTL for server %s: %v\n", name, err)
+		}
+
+		_, err = DecodeTime(server.ExtendedTTL)
+		if err != nil {
+			return fmt.Errorf("Invalid ExtendedTTL for server %s: %v\n", name, err)
+		}
+
+		_, err = DecodeTime(server.MaxTimeBeforeExtend)
+		if err != nil {
+			return fmt.Errorf("Invalid MaxTimeBeforeExtend for server %s: %v\n", name, err)
+		}
+
+		if server.MaxExtensions <= -2 {
+			fmt.Printf("Warning: %s MaxExtensions is -2, consider setting it to a value between -1 and infinity", name)
+		}
+	}
+
+	if config.Config.MaxServers <= -2 {
+		fmt.Printf("Warning: config.MaxServers is -2, consider setting it to a value between -1 and infinity")
+	}
+
+	return nil
+}

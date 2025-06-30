@@ -67,10 +67,9 @@ func startServer(name string) error {
 		return fmt.Errorf("Invalid server name")
 	}
 
-	serverTTL, err := DecodeTime(serverConfig.InitialTTL)
-	if err != nil {
-		return err
-	}
+	serverTTL, _ := DecodeTime(serverConfig.InitialTTL)
+
+	// Get the number of started servers and check if its at or above cap
 
 	stateMutex.Lock()
 	serverState, exists := state.Servers[name]
@@ -104,6 +103,12 @@ func main() {
 	err := LoadConfig()
 	if err != nil {
 		fmt.Println("Error loading config: ", err)
+		return
+	}
+
+	err = ValidateConfig(config)
+	if err != nil {
+		fmt.Println("Error validating config file: ", err)
 		return
 	}
 
