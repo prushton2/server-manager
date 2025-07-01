@@ -17,7 +17,7 @@ servers:
         initialTTL: "1w" # accepts h, d, w, m for hours, days, weeks, months
         extendedTTL: "3d"
         maxTimeBeforeExtend: "1d"
-        maxExtensions: 8
+        maxExtensions: -1 # -1 means infinite extensions allowed
 config:
     maxServers: 1 # max number of servers that can be online at once.
 
