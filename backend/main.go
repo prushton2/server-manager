@@ -162,7 +162,7 @@ func main() {
 
 	SaveState()
 
-	http.HandleFunc("/status/", status)
+	http.HandleFunc("/status", status)
 	http.HandleFunc("/server/", server)
 
 	http.ListenAndServe(":3000", nil)
