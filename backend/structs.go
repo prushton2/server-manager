@@ -20,7 +20,7 @@ type State struct {
 }
 
 type ServerState struct {
-	StartedAt  int64 `json:"startedAt"`
-	Extensions []int `json:"extensions"`
-	EndsAt     int64 `json:"endsAt"`
+	StartedAt  int64   `json:"startedAt"`
+	Extensions []int64 `json:"extensions"`
+	EndsAt     int64   `json:"endsAt"`
 }

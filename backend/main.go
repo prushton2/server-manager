@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,16 @@ func status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	file, err := os.Open("state.json")
+	if err != nil {
+		http.Error(w, "Could not open state.json", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Type", "application/json")
+	io.Copy(w, file)
 
 }
 
@@ -49,14 +60,17 @@ func server(w http.ResponseWriter, r *http.Request) {
 		err = extendServer(command[1])
 	default:
 		http.Error(w, "Provide a valid command (start, extend)", http.StatusBadRequest)
+		io.WriteString(w, "")
+		return
 	}
 
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Error", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%s", err), http.StatusBadRequest)
+		io.WriteString(w, "")
+		return
 	}
 
-	io.WriteString(w, "200")
+	io.WriteString(w, "")
 }
 
 func startServer(name string) error {
@@ -67,6 +81,7 @@ func startServer(name string) error {
 		return fmt.Errorf("Invalid server name")
 	}
 
+	// this cant error since the input was validated already
 	serverTTL, _ := DecodeTime(serverConfig.InitialTTL)
 
 	// Get the number of started servers and check if its at or above cap
@@ -77,12 +92,13 @@ func startServer(name string) error {
 	if !exists {
 		serverState = ServerState{
 			StartedAt:  0,
-			Extensions: make([]int, 0),
+			Extensions: make([]int64, 0),
 			EndsAt:     0,
 		}
 	}
 
 	serverState.StartedAt = now
+	serverState.Extensions = make([]int64, 0)
 	serverState.EndsAt = now + serverTTL
 
 	state.Servers[name] = serverState
@@ -93,13 +109,43 @@ func startServer(name string) error {
 }
 
 func extendServer(name string) error {
+	serverConfig, exists := config.Servers[name]
+
+	if !exists {
+		return fmt.Errorf("Invalid server name")
+	}
+
+	maxTimeLeftBeforeExtended, _ := DecodeTime(serverConfig.MaxTimeBeforeExtend)
+	timeToExtendBy, _ := DecodeTime(serverConfig.ExtendedTTL)
+
+	stateMutex.Lock()
+	serverState, exists := state.Servers[name]
+	stateMutex.Unlock()
+
+	if !exists {
+		return fmt.Errorf("Server state not declared, try starting the server.")
+	}
+
+	if serverState.EndsAt-maxTimeLeftBeforeExtended > time.Now().Unix() {
+		return fmt.Errorf("Server has too much time remaining to extend")
+	}
+
+	if len(serverState.Extensions) >= serverConfig.MaxExtensions && serverConfig.MaxExtensions != -1 {
+		return fmt.Errorf("Server has been extended the maximum number of times for this reboot")
+	}
+
+	serverState.EndsAt += timeToExtendBy
+	serverState.Extensions = append(serverState.Extensions, timeToExtendBy)
+
+	stateMutex.Lock()
+	state.Servers[name] = serverState
+	stateMutex.Unlock()
 
 	SaveState()
 	return nil
 }
 
 func main() {
-	LoadState()
 	err := LoadConfig()
 	if err != nil {
 		fmt.Println("Error loading config: ", err)
@@ -111,6 +157,10 @@ func main() {
 		fmt.Println("Error validating config file: ", err)
 		return
 	}
+
+	LoadState(config)
+
+	SaveState()
 
 	http.HandleFunc("/status/", status)
 	http.HandleFunc("/server/", server)

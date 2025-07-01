@@ -35,7 +35,8 @@ func DecodeTime(formattedTime string) (int64, error) { //decodes "12h" or "5w" t
 	return duration * time, nil
 }
 
-func LoadState() {
+// it uses config to create the state if not exists
+func LoadState(config Config) {
 	file, err := os.OpenFile("./state.json", os.O_RDONLY, 0644)
 	if err != nil {
 		fmt.Println("Error opening state.json. Please make sure the file exists: ", err)
@@ -44,11 +45,7 @@ func LoadState() {
 
 	body, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println("Error loading state, resetting: ", err)
-		fmt.Println("Please take down any currently running servers, they will be orphaned from the new state object")
-		state = State{
-			Servers: make(map[string]ServerState),
-		}
+		fmt.Println("Error loading state")
 		return
 	}
 
@@ -56,9 +53,19 @@ func LoadState() {
 	if err != nil {
 		fmt.Println("Error umarshalling state json, resetting: ", err)
 		fmt.Println("Please take down any currently running servers, they will be orphaned from the new state object")
+
 		state = State{
 			Servers: make(map[string]ServerState),
 		}
+
+		for name := range config.Servers {
+			state.Servers[name] = ServerState{
+				StartedAt:  0,
+				Extensions: make([]int64, 0),
+				EndsAt:     0,
+			}
+		}
+
 		return
 	}
 
