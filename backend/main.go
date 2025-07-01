@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,10 @@ var state State = State{
 	Servers: make(map[string]ServerState),
 }
 
-var configMutex sync.RWMutex
 var config Config
+
+// this prevents docker compose up/down commands from being run at the same time
+var containerManagerMutex sync.RWMutex
 
 func status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -104,6 +107,8 @@ func startServer(name string) error {
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
 
+	manageDockerContainers()
+
 	SaveState()
 	return nil
 }
@@ -145,6 +150,68 @@ func extendServer(name string) error {
 	return nil
 }
 
+func manageDockerContainersThread() {
+	for {
+		time.Sleep(1 * time.Second)
+		now := time.Now().Unix()
+		if now%60 == 0 {
+			manageDockerContainers()
+		}
+	}
+}
+
+func manageDockerContainers() {
+	containerManagerMutex.Lock()
+	stateMutex.Lock()
+
+	for name, serverState := range state.Servers {
+		serverConfig, exists := config.Servers[name]
+		if !exists {
+			continue
+		}
+
+		cmd := exec.Command("docker", "ps", "--format", "{{json .}}")
+		cmd.Dir = serverConfig.Directory
+
+		out, err := cmd.Output()
+
+		if err != nil {
+			fmt.Println("Error running `docker ps --format '{{json .}} in ", serverConfig.Directory, ": ", err)
+			continue
+		}
+
+		var started bool = len(out) >= 5
+		var shouldBeStarted bool = serverState.EndsAt > time.Now().Unix()
+
+		if started && !shouldBeStarted {
+			cmd := exec.Command("docker", "compose", "down")
+			cmd.Dir = serverConfig.Directory
+			_, err := cmd.Output()
+
+			if err != nil {
+				fmt.Println("Error shutting down ", serverConfig.Directory, ": ", err)
+				continue
+			}
+
+		}
+
+		if !started && shouldBeStarted {
+			cmd := exec.Command("docker", "compose", "up", "-d")
+			cmd.Dir = serverConfig.Directory
+			_, err := cmd.Output()
+
+			if err != nil {
+				fmt.Println("Error starting up ", serverConfig.Directory, ": ", err)
+				continue
+			}
+
+		}
+	}
+
+	stateMutex.Unlock()
+	containerManagerMutex.Unlock()
+}
+
 func main() {
 	err := LoadConfig()
 	if err != nil {
@@ -161,6 +228,8 @@ func main() {
 	LoadState(config)
 
 	SaveState()
+
+	go manageDockerContainersThread()
 
 	http.HandleFunc("/status", status)
 	http.HandleFunc("/server/", server)
