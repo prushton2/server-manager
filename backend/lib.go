@@ -15,9 +15,6 @@ func DecodeTime(formattedTime string) (int64, error) { //decodes "12h" or "5w" t
 	duration, err := strconv.ParseInt(formattedTime[:len(formattedTime)-1], 10, 64)
 	var time int64 = 0
 
-	fmt.Println(unit)
-	fmt.Println(duration)
-
 	if err != nil {
 		return 0, fmt.Errorf("Invalid time declaration %s. This should be in the format <time><duration>, ie 12h or 2w", formattedTime)
 	}
@@ -126,12 +123,12 @@ func ValidateConfig(config Config) error {
 		}
 
 		if server.MaxExtensions <= -2 {
-			fmt.Printf("Warning: %s MaxExtensions is -2, consider setting it to a value between -1 and infinity", name)
+			return fmt.Errorf("Warning: %s MaxExtensions is %d, consider setting it to a value between -1 and infinity", name, server.MaxExtensions)
 		}
 	}
 
 	if config.Config.MaxServers <= -2 {
-		fmt.Printf("Warning: config.MaxServers is -2, consider setting it to a value between -1 and infinity")
+		return fmt.Errorf("Warning: config.MaxServers is %d, consider setting it to a value between -1 and infinity", config.Config.MaxServers)
 	}
 
 	return nil
