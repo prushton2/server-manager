@@ -20,7 +20,7 @@
 body {
   margin: 0;
   display: flex;
-  place-items: center;
+  /* place-items: center; */
   background-color: var(--bg-dark);
   padding-top: 2vh;
   min-width: 320px;
