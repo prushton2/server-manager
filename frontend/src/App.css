@@ -1,42 +1,76 @@
 #root {
-  max-width: 1280px;
+  border: 1px solid red;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* border: 1px solid red; */
+  width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem; 
   text-align: center;
-}
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+  @media (pointer:none), (pointer:coarse) {
+    padding: 0;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.serverDiv {
+  display: flex;
+  flex-direction: row;
+  flex-basis: 0%;
+
+  padding: 20px;
+  margin: 10px;
+  background-color: var(--bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 60%;
+
+  @media (pointer:none), (pointer:coarse) {
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 20px;
   }
 }
 
-.card {
-  padding: 2em;
+
+.serverLabel {
+  display: flex;
+  flex-grow: 1;
+  flex-basis: 0%;
+
+  color: var(--text);
+  font-size: xx-large;
 }
 
-.read-the-docs {
-  color: #888;
+.serverStatus {
+  display: flex;
+  flex-grow: 1;
+  flex-basis: 0%;
+
+  color: var(--text);
+  font-size: xx-large;
+}
+
+.serverButton {
+  /* display: flex;
+  flex-grow: 1;
+  flex-basis: 0%; */
+
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  color: var(--bg-dark);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 10);
+
+
+  background-color: var(--green);
+  font-size: xx-large;
+}
+
+.serverButton:active {
+  background-color: var(--green-dark);
+  /* transform: scale(0.98); */
+  box-shadow: 0 1px 2px rgba(0,0,0,0);
 }
