@@ -1,2 +1,3 @@
 backend/config.yaml
 backend/state.json
+compose.yaml

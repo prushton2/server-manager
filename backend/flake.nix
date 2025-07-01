@@ -15,7 +15,7 @@
       pname = modname;
       version = "0.1.0";
       src = ./.;
-      vendorHash = null; # "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      vendorHash = "sha256-g+yaVIx4jxpAQ/+WrGKxhVeliYx7nLQe/zsGpxV4Fn4=";
       doCheck = false;
     };
 
