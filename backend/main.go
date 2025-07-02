@@ -170,7 +170,9 @@ func manageDockerContainers() {
 			continue
 		}
 
-		cmd := exec.Command("docker", "ps", "--format", "{{json .}}")
+		// fmt.Println("Name: ", name)
+
+		cmd := exec.Command("docker", "compose", "ps", "--format", "{{json .}}")
 		cmd.Dir = serverConfig.Directory
 
 		out, err := cmd.Output()
@@ -183,7 +185,11 @@ func manageDockerContainers() {
 		var started bool = len(out) >= 5
 		var shouldBeStarted bool = serverState.EndsAt > time.Now().Unix()
 
+		// fmt.Println("Started: ", started, "\nShould be started: ", shouldBeStarted);
+		// fmt.Println("Out: ", string(out))
+
 		if started && !shouldBeStarted {
+			// fmt.Println("Turning off")
 			cmd := exec.Command("docker", "compose", "down")
 			cmd.Dir = serverConfig.Directory
 			_, err := cmd.Output()
@@ -196,6 +202,7 @@ func manageDockerContainers() {
 		}
 
 		if !started && shouldBeStarted {
+			// fmt.Println("Turning on")
 			cmd := exec.Command("docker", "compose", "up", "-d")
 			cmd.Dir = serverConfig.Directory
 			_, err := cmd.Output()
