@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/SherClockHolmes/webpush-go"
 )
 
 var stateMutex sync.RWMutex
@@ -36,6 +39,9 @@ func status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	io.Copy(w, file)
 
+}
+
+func notify(w http.ResponseWriter, r *http.Request) {
 }
 
 func server(w http.ResponseWriter, r *http.Request) {
@@ -220,7 +226,27 @@ func manageDockerContainers() {
 }
 
 func main() {
-	err := LoadConfig()
+	vapidPublicKey := os.Getenv("PUBLIC_VAPID_KEY")
+	vapidPrivateKey := os.Getenv("PRIVATE_VAPID_KEY")
+	email := os.Getenv("VAPID_EMAIL")
+
+	s := webpush.Subscription{}
+	json.Unmarshal([]byte("<YOUR_SUBSCRIPTION>"), &s)
+
+	// Send Notification
+
+	resp, err := webpush.SendNotification([]byte("Test"), &s, &webpush.Options{
+		Subscriber:      email,
+		VAPIDPublicKey:  vapidPublicKey,
+		VAPIDPrivateKey: vapidPrivateKey,
+		TTL:             30,
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+
+	err = LoadConfig()
 	if err != nil {
 		fmt.Println("Error loading config: ", err)
 		return
