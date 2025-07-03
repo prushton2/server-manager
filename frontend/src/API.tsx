@@ -1,9 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import type { State } from './models/State';
 
-export const GetState = async (): Promise<State> => {
+export const GetState = async (password: string): Promise<State> => {
     try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/status`);
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/status`, {password: password});
         return response.data as State;
     } catch (error) {
         return (error as AxiosError).request.response
@@ -13,18 +13,27 @@ export const GetState = async (): Promise<State> => {
     // return JSON.parse(s) as State;
 };
 
-export const Start = async (name: string): Promise<string> => {
+export const Start = async (name: string, password: string): Promise<string> => {
     try {
-        await axios.get(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/start`);
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/start`, {password: password});
         return ""
     } catch (error) {
         return (error as AxiosError).request.response
     }
 }
 
-export const Extend = async (name: string): Promise<string> => {
+export const Extend = async (name: string, password: string): Promise<string> => {
     try {
-        await axios.get(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/extend`);
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/extend`, {password: password});
+        return ""
+    } catch (error) {
+        return (error as AxiosError).request.response
+    }
+};
+
+export const Authenticate = async (password: string): Promise<string> => {
+    try {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/authenticate`, {password: password});
         return ""
     } catch (error) {
         return (error as AxiosError).request.response

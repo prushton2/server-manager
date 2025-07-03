@@ -1,34 +1,65 @@
 import './App.css'
 import { useEffect, useState, type JSX } from 'react'
 import type { ServerState, State } from './models/State'
-import { Extend, GetState, Start } from './API'
+import { Authenticate, Extend, GetState, Start } from './API'
 import { toast } from "react-fox-toast"
 
 function App() {
   const [state, setState] = useState<State | null>(null)
+  const [requiresAuth, setRequiresAuth] = useState<boolean>(false)
 
   useEffect(() => {
     async function init() {
-      let newstate = await GetState()
+      let password: string = localStorage.getItem("password")+""
+      let auth = await Authenticate(password)
+
+      if(auth != "") {
+        toast.error(`Please authenticate before using the site.`)
+        setRequiresAuth(true)
+      }
+
+      let newstate = await GetState(password)
       setState(newstate)
     }
     init()
   }, [])
 
-  return (
-    <>
-      {state == null ? <>State is null</> : 
+  function renderState() {
+    return <>
+      {
+        state == null ? <>State is null</> : 
         Object.entries(state.servers)
         .map(([name, serverState]) => {
           return <Server key={name} name={name} serverState={serverState} />
         })
       }
     </>
+  }
+
+  return (
+    <>
+      {requiresAuth ? AuthenticationWindow() : renderState()}
+    </>
   )
 }
 
 export default App
 
+function AuthenticationWindow() {
+  return <>
+    <div className="serverDiv">
+      <label className="enterPassword">Please enter your password</label>
+      <div className="lineBreak"/>
+      <input className="bigInput" onKeyDown={(e) => {
+          if(e.code == "Enter") {
+            // @ts-ignore
+            localStorage.setItem("password", e.target.value)
+            window.location.reload()
+          }
+        }}/>
+    </div>
+  </>
+}
 
 function Server({name, serverState}: {name: string, serverState: ServerState}): JSX.Element {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
@@ -70,9 +101,10 @@ function formatTime(time: number): string {
 }
 
 async function startOrExtend(name: string, timeRemaining: number) {
+  let password: string = localStorage.getItem("password")+""
   if(timeRemaining < 0) {
 
-    let response = await Start(name)
+    let response = await Start(name, password)
     if(response == "") {
       toast.success('Starting Server')
       window.location.reload()
@@ -82,7 +114,7 @@ async function startOrExtend(name: string, timeRemaining: number) {
 
   } else {
 
-    let response = await Extend(name)
+    let response = await Extend(name, password)
     if(response == "") {
       toast.success('Extending Server')
       window.location.reload()

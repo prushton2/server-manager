@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -139,4 +140,36 @@ func ValidateConfig(config Config) error {
 	}
 
 	return nil
+}
+
+func CheckAuth(password string) (UserInfo, error) {
+	for name, info := range config.Users {
+		if info.Password == password {
+			user := UserInfo{
+				name:      name,
+				CanStart:  info.CanStart,
+				CanExtend: info.CanExtend,
+				CanView:   info.CanView,
+			}
+			return user, nil
+		}
+	}
+
+	return UserInfo{}, fmt.Errorf("Password not found")
+}
+
+func ValidateUser(r *http.Request) (UserInfo, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return UserInfo{}, fmt.Errorf("Error reading request body (is this a post request?)")
+	}
+
+	// parse the body
+	var parsedBody PasswordRequest
+	err = json.Unmarshal(body, &parsedBody)
+	if err != nil {
+		return UserInfo{}, fmt.Errorf("Body is not valid JSON")
+	}
+
+	return CheckAuth(parsedBody.Password)
 }
