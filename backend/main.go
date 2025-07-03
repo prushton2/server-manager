@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/SherClockHolmes/webpush-go"
 )
 
 var stateMutex sync.RWMutex
@@ -29,6 +26,18 @@ func status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	userInfo, err := ValidateUser(r)
+
+	if !userInfo.CanView {
+		http.Error(w, "User lacks permission to view", http.StatusForbidden)
+		return
+	}
+
 	file, err := os.Open("state.json")
 	if err != nil {
 		http.Error(w, "Could not open state.json", http.StatusInternalServerError)
@@ -41,13 +50,42 @@ func status(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func notify(w http.ResponseWriter, r *http.Request) {
+func authenticate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// this does the body reading too
+	_, err := ValidateUser(r)
+
+	if err != nil {
+		http.Error(w, "Invalid Password", http.StatusBadRequest)
+		return
+	}
+
+	io.WriteString(w, "")
 }
 
 func server(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	UserInfo, err := ValidateUser(r)
+	if err != nil {
+		http.Error(w, "Invalid Authentication", http.StatusForbidden)
+		return
+	}
 
 	var command = strings.Split(r.URL.String(), "/")
 	if command[0] == "" {
@@ -60,13 +98,13 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var err error
+	// var err error
 
 	switch command[2] {
 	case "start":
-		err = startServer(command[1])
+		err = startServer(command[1], UserInfo)
 	case "extend":
-		err = extendServer(command[1])
+		err = extendServer(command[1], UserInfo)
 	default:
 		http.Error(w, "Provide a valid command (start, extend)", http.StatusBadRequest)
 		io.WriteString(w, "")
@@ -79,10 +117,16 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("%s: command: %s: %s\n", UserInfo.name, command[2], command[1])
+
 	io.WriteString(w, "")
 }
 
-func startServer(name string) error {
+func startServer(name string, userInfo UserInfo) error {
+	if !userInfo.CanStart {
+		return fmt.Errorf("User lacks permission to start server")
+	}
+
 	now := time.Now().Unix()
 	serverConfig, exists := config.Servers[name]
 
@@ -119,7 +163,11 @@ func startServer(name string) error {
 	return nil
 }
 
-func extendServer(name string) error {
+func extendServer(name string, userInfo UserInfo) error {
+	if !userInfo.CanExtend {
+		return fmt.Errorf("User lacks permission to extend server")
+	}
+
 	serverConfig, exists := config.Servers[name]
 
 	if !exists {
@@ -205,6 +253,8 @@ func manageDockerContainers() {
 				continue
 			}
 
+			fmt.Printf("server: execute: stop: %s\n", name)
+
 		}
 
 		if !started && shouldBeStarted {
@@ -218,6 +268,7 @@ func manageDockerContainers() {
 				continue
 			}
 
+			fmt.Printf("server: execute: start: %s\n", name)
 		}
 	}
 
@@ -226,27 +277,7 @@ func manageDockerContainers() {
 }
 
 func main() {
-	vapidPublicKey := os.Getenv("PUBLIC_VAPID_KEY")
-	vapidPrivateKey := os.Getenv("PRIVATE_VAPID_KEY")
-	email := os.Getenv("VAPID_EMAIL")
-
-	s := webpush.Subscription{}
-	json.Unmarshal([]byte("<YOUR_SUBSCRIPTION>"), &s)
-
-	// Send Notification
-
-	resp, err := webpush.SendNotification([]byte("Test"), &s, &webpush.Options{
-		Subscriber:      email,
-		VAPIDPublicKey:  vapidPublicKey,
-		VAPIDPrivateKey: vapidPrivateKey,
-		TTL:             30,
-	})
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-
-	err = LoadConfig()
+	err := LoadConfig()
 	if err != nil {
 		fmt.Println("Error loading config: ", err)
 		return
@@ -265,6 +296,7 @@ func main() {
 	go manageDockerContainersThread()
 
 	http.HandleFunc("/status", status)
+	http.HandleFunc("/authenticate", authenticate)
 	http.HandleFunc("/server/", server)
 
 	http.ListenAndServe(":3000", nil)

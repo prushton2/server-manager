@@ -20,6 +20,13 @@ servers:
         maxExtensions: -1 # -1 means infinite extensions allowed
 config:
     maxServers: 1 # max number of servers that can be online at once.
+
+users:
+  root: # username for logging purposes
+    password: "reallySecurePassword" # No hashing :(
+    canStart: true # can they start servers
+    canExtend: true # can they extend servers
+    canView: true # can they view servers
 ```
 
 # Docker Compose
