@@ -33,6 +33,7 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml # Config file
       - ./state.json:/app/state.json   # State file to store server state between restarts
+      - ./.env:/.env   # State file to store server state between restarts
       - /var/run/docker.sock:/var/run/docker.sock # Mount the docker socket
       - /home/server/containers/satisfactory:/home/user/containers/satisfactory # Mount any containers you want to be controlled to the directory specified in the compose
       - /home/server/containers/minecraft:/home/user/containers/minecraft
@@ -44,4 +45,13 @@ services:
     ports:
       - 80:80
 
+```
+
+# .env
+
+This site supports push notifications to let players know when the time on the server is low. You can  acquire your own keys [here](). If you dont want to use this, simply put null in the vapid keys. 
+
+```env
+PUBLIC_VAPID_KEY=null
+PRIVATE_VAPID_KEY=null
 ```
