@@ -34,7 +34,7 @@ function App() {
         state == null ? <>State is null</> : 
         Object.entries(state.servers)
         .map(([name, serverState]) => {
-          return <Server key={name} name={name} serverState={serverState} userInfo={userInfo}/>
+          return <Server key={name} name={name} serverState={serverState} userInfo={userInfo != null ? userInfo : {} as UserInfo}/>
         })
       }
     </>
