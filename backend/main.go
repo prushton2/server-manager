@@ -61,14 +61,16 @@ func authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this does the body reading too
-	_, err := ValidateUser(r)
+	UserInfo, err := ValidateUser(r)
 
 	if err != nil {
 		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
 	}
 
-	io.WriteString(w, "")
+	str, err := json.Marshal(UserInfo)
+
+	io.Writer.Write(w, str)
 }
 
 func server(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +93,13 @@ func server(w http.ResponseWriter, r *http.Request) {
 	if url[0] == "" {
 		url = url[1:]
 	}
+
+	if len(url) < 3 {
+		http.Error(w, "Provide a server name and command (start, extend)", http.StatusBadRequest)
+		io.WriteString(w, "")
+		return
+	}
+
 	//command (start, stop, extend); server (satisfactory, minecraft)
 	var command = url[2]
 	var server = url[1]
@@ -100,14 +109,6 @@ func server(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "")
 		return
 	}
-
-	if len(command) < 3 {
-		http.Error(w, "Provide a server name and command (start, extend)", http.StatusBadRequest)
-		io.WriteString(w, "")
-		return
-	}
-
-	// var err error
 
 	switch command {
 	case "start":
@@ -128,7 +129,7 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("%s: command: %s: %s\n", UserInfo.name, command, server)
+	fmt.Printf("%s: command: %s: %s\n", UserInfo.Name, command, server)
 
 	io.WriteString(w, "")
 }
@@ -164,6 +165,7 @@ func startServer(name string) error {
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
 
+	// do the starting of the server
 	manageDockerContainers()
 
 	SaveState()
@@ -233,6 +235,9 @@ func stopServer(name string) error {
 	stateMutex.Lock()
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
+
+	// do the stopping of the server
+	manageDockerContainers()
 
 	SaveState()
 	return nil

@@ -39,9 +39,9 @@ type PasswordRequest struct {
 }
 
 type UserInfo struct {
-	name           string
-	CanStart       bool
-	CanExtend      bool
-	CanStop        bool
-	AllowedServers []string
+	Name           string   `json:"name"`
+	CanStart       bool     `json:"canStart"`
+	CanExtend      bool     `json:"canExtend"`
+	CanStop        bool     `json:"canStop"`
+	AllowedServers []string `json:"allowedServers"`
 }

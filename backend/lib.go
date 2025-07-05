@@ -146,7 +146,7 @@ func GetAuth(password string) (UserInfo, error) {
 	for name, info := range config.Users {
 		if info.Password == password {
 			user := UserInfo{
-				name:           name,
+				Name:           name,
 				CanStart:       info.CanStart,
 				CanExtend:      info.CanExtend,
 				CanStop:        info.CanStop,
@@ -186,6 +186,8 @@ func HasAuth(user UserInfo, server string, action string) bool {
 				return user.CanExtend
 			case "stop":
 				return user.CanStop
+			default:
+				return false
 			}
 		}
 	}
