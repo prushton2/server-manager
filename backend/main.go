@@ -6,17 +6,19 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
+	"server-manager/auth"
+	"server-manager/types"
 	"strings"
 	"sync"
 	"time"
 )
 
 var stateMutex sync.RWMutex
-var state State = State{
-	Servers: make(map[string]ServerState),
+var state types.State = types.State{
+	Servers: make(map[string]types.ServerState),
 }
 
-var config Config
+var config types.Config
 
 // this prevents docker compose up/down commands from being run at the same time since the manager is invoked by both the goroutine and the start/stop endpoints
 var containerManagerMutex sync.RWMutex
@@ -31,13 +33,13 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userInfo, err := ValidateUser(r)
+	userInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
 	}
 
-	filteredState := State{Servers: make(map[string]ServerState)}
+	filteredState := types.State{Servers: make(map[string]types.ServerState)}
 
 	for _, visibleServer := range userInfo.AllowedServers {
 		server, exists := state.Servers[visibleServer]
@@ -64,8 +66,7 @@ func authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this does the body reading too
-	UserInfo, err := ValidateUser(r)
-
+	UserInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
@@ -86,7 +87,7 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	UserInfo, err := ValidateUser(r)
+	UserInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Authentication", http.StatusForbidden)
 		return
@@ -107,7 +108,7 @@ func server(w http.ResponseWriter, r *http.Request) {
 	var command = url[2]
 	var server = url[1]
 
-	if !HasAuth(UserInfo, server, command) {
+	if !auth.HasAuth(UserInfo, server, command) {
 		http.Error(w, "Missing permission", http.StatusForbidden)
 		io.WriteString(w, "")
 		return
@@ -154,7 +155,7 @@ func startServer(name string) error {
 	serverState, exists := state.Servers[name]
 
 	if !exists {
-		serverState = ServerState{
+		serverState = types.ServerState{
 			StartedAt:  0,
 			Extensions: make([]int64, 0),
 			EndsAt:     0,

@@ -1,4 +1,4 @@
-package main
+package types
 
 type Config struct {
 	Servers map[string]ServerConfig `yaml:"servers"`

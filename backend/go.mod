@@ -1,4 +1,4 @@
-module prushton.com/server-manager
+module server-manager
 
 go 1.24.3
 
