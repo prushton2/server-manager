@@ -4,10 +4,12 @@ import type { ServerState, State } from './models/State'
 import { Action, Authenticate, GetState } from './API'
 import { toast } from "react-fox-toast"
 import type { UserInfo } from './models/User'
+import Ribbon from './components/Ribbon'
+import AuthenticationWindow from './components/AuthenticationWIndow'
 
 function App() {
   const [state, setState] = useState<State | null>(null)
-  const [userInfo, setUserInfo] = useState<UserInfo>()
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [requiresAuth, setRequiresAuth] = useState<boolean>(false)
 
   useEffect(() => {
@@ -29,41 +31,27 @@ function App() {
   }, [])
 
   function renderState() {
-    return <>
-      {
-        state == null ? <>State is null</> : 
-        Object.entries(state.servers)
-        .map(([name, serverState]) => {
-          return <Server key={name} name={name} serverState={serverState} userInfo={userInfo != null ? userInfo : {} as UserInfo}/>
-        })
-      }
-    </>
-  }
+    if (state == null) {
+      return <>state is null</>
+    }
+    if (userInfo == null) {
+      return <>userInfo is null</>
+    }
 
+    return Object.entries(state.servers).map(([name, serverState]) => {
+        return <Server key={name} name={name} serverState={serverState} userInfo={userInfo}/>
+      })
+  }
+  
   return (
     <>
-      {requiresAuth ? AuthenticationWindow() : renderState()}
+      <Ribbon userInfo={userInfo} />
+      {requiresAuth ? <AuthenticationWindow /> : renderState()}
     </>
   )
 }
 
 export default App
-
-function AuthenticationWindow() {
-  return <>
-    <div className="serverDiv">
-      <label className="enterPassword">Please enter your password</label>
-      <div className="lineBreak"/>
-      <input className="bigInput" onKeyDown={(e) => {
-          if(e.code == "Enter") {
-            // @ts-ignore
-            localStorage.setItem("password", e.target.value)
-            window.location.reload()
-          }
-        }}/>
-    </div>
-  </>
-}
 
 function Server({name, serverState, userInfo}: {name: string, serverState: ServerState, userInfo: UserInfo}): JSX.Element {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)

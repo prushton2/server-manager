@@ -109,31 +109,5 @@
   height: 0;
 }
 
-.enterPassword {
-  /* border: 1px solid red; */
-  display: flex;
-  flex-grow: 1;
-  flex-basis: 0%;
 
-  align-items: center;
-  
-  color: var(--text);
-  font-size: x-large;
-  padding-bottom: 10px;
-}
 
-.bigInput {
-  border: none;
-  /* border: 1px solid red; */
-  display: flex;
-  flex-grow: 1;
-  flex-basis: 0%;
-  padding: 10px;
-
-  align-items: center;
-  
-  color: var(--text);
-  background-color: var(--bg-dark);
-  border-radius: 5px;
-  /* font-size: x-large; */
-}

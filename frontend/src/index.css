@@ -4,10 +4,14 @@
   --bg-light: hsl(0 0% 23%);
   --text: hsl(0 0% 90%);
   --text-muted: hsl(0 0% 70%);
+
   --green: hsl(111, 76%, 37%);
   --green-dark: hsl(111, 75%, 17%);
   --red: hsl(10, 76%, 37%);
   --red-dark: hsl(10, 75%, 17%);
+
+  --blue: hsl(250, 28%, 20%);
+  --blue-dark: hsl(250, 27%, 15%);
 
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
