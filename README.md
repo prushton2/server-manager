@@ -22,11 +22,21 @@ config:
     maxServers: 1 # max number of servers that can be online at once.
 
 users:
-  root: # username for logging purposes
-    password: "reallySecurePassword" # No hashing :(
-    canStart: true # can they start servers
-    canExtend: true # can they extend servers
-    canView: true # can they view servers
+  root: # Username for logging purposes 
+    password: "testPassword"
+    canStart: true # interactions they can perform on the servers they can see
+    canExtend: true
+    canStop: true
+    allowedServers: # servers they can interact with
+      - "astroneer"
+      - "satisfactory"
+  user:
+    password: "supersecretpassword" # The user's unique password. You generate these, and they are stored without a hash :(
+    canStart: true
+    canExtend: true
+    canStop: false  
+    allowedServers:
+      - "satisfactory"
 ```
 
 # Docker Compose
