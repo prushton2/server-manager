@@ -85,6 +85,24 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0);
 }
 
+.stopButton {
+  padding: 10px;
+  margin-right: 10px;
+  border: none;
+  border-radius: 5px;
+  color: var(--bg-dark);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 10);
+
+
+  background-color: var(--red);
+  font-size: xx-large;
+}
+
+.stopButton:active {
+  background-color: var(--red-dark);
+  box-shadow: 0 1px 2px rgba(0,0,0,0);
+}
+
 .lineBreak {
   flex-basis: 100%;
   height: 0;

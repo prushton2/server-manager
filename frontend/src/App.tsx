@@ -1,7 +1,7 @@
 import './App.css'
 import { useEffect, useState, type JSX } from 'react'
 import type { ServerState, State } from './models/State'
-import { Authenticate, Extend, GetState, Start } from './API'
+import { Action, Authenticate, GetState } from './API'
 import { toast } from "react-fox-toast"
 
 function App() {
@@ -76,7 +76,8 @@ function Server({name, serverState}: {name: string, serverState: ServerState}): 
     <label className="serverName">{name.charAt(0).toUpperCase() + name.slice(1)}</label>
     <label className="serverStatus"> {timeRemaining < 0 ? "Server is off" : `${formatTime(timeRemaining)}`}</label>
     <div className="serverButtonContainer">
-      <button className="serverButton" onClick={() => startOrExtend(name, timeRemaining)}>{timeRemaining < 0 ? "Start" : "Extend"}</button>
+      <button className="stopButton" onClick={() => serverAction(name, "stop")}>Stop</button>
+      <button className="serverButton" onClick={() => serverAction(name, timeRemaining < 0 ? "start" : "extend")}>{timeRemaining < 0 ? "Start" : "Extend"}</button>
     </div>
   </div>
 
@@ -100,26 +101,14 @@ function formatTime(time: number): string {
   return `${(daysStr)}:${(hoursStr)}:${(minutesStr)}:${(secondsStr)}`
 }
 
-async function startOrExtend(name: string, timeRemaining: number) {
+async function serverAction(name: string, action: string) {
   let password: string = localStorage.getItem("password")+""
-  if(timeRemaining < 0) {
 
-    let response = await Start(name, password)
-    if(response == "") {
-      toast.success('Starting Server')
-      window.location.reload()
-    } else {
-      toast.error(`Error: ${response}`)
-    }
+  let response = await Action(name, password, action)
 
+  if(response == "") {
+    window.location.reload()
   } else {
-
-    let response = await Extend(name, password)
-    if(response == "") {
-      toast.success('Extending Server')
-      window.location.reload()
-    } else {
-      toast.error(`Error: ${response}`)
-    }
+    toast.error(`Error: ${response}`)
   }
 }
