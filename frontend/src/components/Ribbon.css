@@ -11,3 +11,18 @@
     text-align: center;
     z-index: 1;
 }
+
+.User {
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    margin-right: 10px;
+    z-index: 2;
+    color: var(--text);
+    background-color: var(--bg);
+    border: none;
+}
+
+.LogoutLabel {
+    color: var(--text-muted);
+}
