@@ -1,4 +1,4 @@
-package main
+package types
 
 type Config struct {
 	Servers map[string]ServerConfig `yaml:"servers"`
@@ -17,10 +17,11 @@ type ServerConfig struct {
 }
 
 type UserConfig struct {
-	CanStart  bool   `yaml:"canStart"`
-	CanExtend bool   `yaml:"canExtend"`
-	CanView   bool   `yaml:"canView"`
-	Password  string `yaml:"password"`
+	Password       string   `yaml:"password"`
+	CanStart       bool     `yaml:"canStart"`
+	CanExtend      bool     `yaml:"canExtend"`
+	CanStop        bool     `yaml:"canStop"`
+	AllowedServers []string `yaml:"allowedServers"`
 }
 
 type State struct {
@@ -38,8 +39,9 @@ type PasswordRequest struct {
 }
 
 type UserInfo struct {
-	name      string
-	CanStart  bool
-	CanExtend bool
-	CanView   bool
+	Name           string   `json:"name"`
+	CanStart       bool     `json:"canStart"`
+	CanExtend      bool     `json:"canExtend"`
+	CanStop        bool     `json:"canStop"`
+	AllowedServers []string `json:"allowedServers"`
 }

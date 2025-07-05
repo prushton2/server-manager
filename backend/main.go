@@ -1,24 +1,26 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
+	"server-manager/auth"
+	"server-manager/types"
 	"strings"
 	"sync"
 	"time"
 )
 
 var stateMutex sync.RWMutex
-var state State = State{
-	Servers: make(map[string]ServerState),
+var state types.State = types.State{
+	Servers: make(map[string]types.ServerState),
 }
 
-var config Config
+var config types.Config
 
-// this prevents docker compose up/down commands from being run at the same time
+// this prevents docker compose up/down commands from being run at the same time since the manager is invoked by both the goroutine and the start/stop endpoints
 var containerManagerMutex sync.RWMutex
 
 func status(w http.ResponseWriter, r *http.Request) {
@@ -31,22 +33,25 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userInfo, err := ValidateUser(r)
-
-	if !userInfo.CanView {
-		http.Error(w, "User lacks permission to view", http.StatusForbidden)
-		return
-	}
-
-	file, err := os.Open("state.json")
+	userInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
-		http.Error(w, "Could not open state.json", http.StatusInternalServerError)
+		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+
+	filteredState := types.State{Servers: make(map[string]types.ServerState)}
+
+	for _, visibleServer := range userInfo.AllowedServers {
+		server, exists := state.Servers[visibleServer]
+		if exists {
+			filteredState.Servers[visibleServer] = server
+		}
+	}
+
+	data, err := json.Marshal(filteredState)
 
 	w.Header().Set("Content-Type", "application/json")
-	io.Copy(w, file)
+	io.Writer.Write(w, data)
 
 }
 
@@ -61,14 +66,15 @@ func authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this does the body reading too
-	_, err := ValidateUser(r)
-
+	UserInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
 	}
 
-	io.WriteString(w, "")
+	str, err := json.Marshal(UserInfo)
+
+	io.Writer.Write(w, str)
 }
 
 func server(w http.ResponseWriter, r *http.Request) {
@@ -81,30 +87,40 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	UserInfo, err := ValidateUser(r)
+	UserInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Authentication", http.StatusForbidden)
 		return
 	}
 
-	var command = strings.Split(r.URL.String(), "/")
-	if command[0] == "" {
-		command = command[1:]
+	var url = strings.Split(r.URL.String(), "/")
+	if url[0] == "" {
+		url = url[1:]
 	}
 
-	if len(command) < 3 {
+	if len(url) < 3 {
 		http.Error(w, "Provide a server name and command (start, extend)", http.StatusBadRequest)
 		io.WriteString(w, "")
 		return
 	}
 
-	// var err error
+	//command (start, stop, extend); server (satisfactory, minecraft)
+	var command = url[2]
+	var server = url[1]
 
-	switch command[2] {
+	if !auth.HasAuth(UserInfo, server, command) {
+		http.Error(w, "Missing permission", http.StatusForbidden)
+		io.WriteString(w, "")
+		return
+	}
+
+	switch command {
 	case "start":
-		err = startServer(command[1], UserInfo)
+		err = startServer(server)
 	case "extend":
-		err = extendServer(command[1], UserInfo)
+		err = extendServer(server)
+	case "stop":
+		err = stopServer(server)
 	default:
 		http.Error(w, "Provide a valid command (start, extend)", http.StatusBadRequest)
 		io.WriteString(w, "")
@@ -117,16 +133,12 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("%s: command: %s: %s\n", UserInfo.name, command[2], command[1])
+	fmt.Printf("%s: command: %s: %s\n", UserInfo.Name, command, server)
 
 	io.WriteString(w, "")
 }
 
-func startServer(name string, userInfo UserInfo) error {
-	if !userInfo.CanStart {
-		return fmt.Errorf("User lacks permission to start server")
-	}
-
+func startServer(name string) error {
 	now := time.Now().Unix()
 	serverConfig, exists := config.Servers[name]
 
@@ -143,7 +155,7 @@ func startServer(name string, userInfo UserInfo) error {
 	serverState, exists := state.Servers[name]
 
 	if !exists {
-		serverState = ServerState{
+		serverState = types.ServerState{
 			StartedAt:  0,
 			Extensions: make([]int64, 0),
 			EndsAt:     0,
@@ -157,17 +169,14 @@ func startServer(name string, userInfo UserInfo) error {
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
 
+	// do the starting of the server
 	manageDockerContainers()
 
 	SaveState()
 	return nil
 }
 
-func extendServer(name string, userInfo UserInfo) error {
-	if !userInfo.CanExtend {
-		return fmt.Errorf("User lacks permission to extend server")
-	}
-
+func extendServer(name string) error {
 	serverConfig, exists := config.Servers[name]
 
 	if !exists {
@@ -199,6 +208,40 @@ func extendServer(name string, userInfo UserInfo) error {
 	stateMutex.Lock()
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
+
+	SaveState()
+	return nil
+}
+
+func stopServer(name string) error {
+	_, exists := config.Servers[name]
+
+	if !exists {
+		return fmt.Errorf("Invalid server name")
+	}
+
+	stateMutex.Lock()
+	serverState, exists := state.Servers[name]
+	stateMutex.Unlock()
+
+	if !exists {
+		return fmt.Errorf("Server state not declared, try starting the server.")
+	}
+
+	if serverState.EndsAt <= time.Now().Unix() {
+		return fmt.Errorf("Server is off")
+	}
+
+	serverState.EndsAt = 0
+	serverState.StartedAt = 0
+	serverState.Extensions = make([]int64, 0)
+
+	stateMutex.Lock()
+	state.Servers[name] = serverState
+	stateMutex.Unlock()
+
+	// do the stopping of the server
+	manageDockerContainers()
 
 	SaveState()
 	return nil

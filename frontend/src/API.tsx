@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { State } from './models/State';
+import type { UserInfo } from './models/User';
 
 export const GetState = async (password: string): Promise<State> => {
     try {
@@ -13,28 +14,19 @@ export const GetState = async (password: string): Promise<State> => {
     // return JSON.parse(s) as State;
 };
 
-export const Start = async (name: string, password: string): Promise<string> => {
+export const Action = async (name: string, password: string, action: string): Promise<string> => {
     try {
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/start`, {password: password});
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/${action}`, {password: password});
         return ""
     } catch (error) {
         return (error as AxiosError).request.response
     }
 }
 
-export const Extend = async (name: string, password: string): Promise<string> => {
+export const Authenticate = async (password: string): Promise<UserInfo | string> => {
     try {
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/server/${name}/extend`, {password: password});
-        return ""
-    } catch (error) {
-        return (error as AxiosError).request.response
-    }
-};
-
-export const Authenticate = async (password: string): Promise<string> => {
-    try {
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/authenticate`, {password: password});
-        return ""
+        let response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/authenticate`, {password: password});
+        return response.data as UserInfo
     } catch (error) {
         return (error as AxiosError).request.response
     }
