@@ -3,9 +3,11 @@ import { useEffect, useState, type JSX } from 'react'
 import type { ServerState, State } from './models/State'
 import { Action, Authenticate, GetState } from './API'
 import { toast } from "react-fox-toast"
+import type { UserInfo } from './models/User'
 
 function App() {
   const [state, setState] = useState<State | null>(null)
+  const [userInfo, setUserInfo] = useState<UserInfo>()
   const [requiresAuth, setRequiresAuth] = useState<boolean>(false)
 
   useEffect(() => {
@@ -13,7 +15,9 @@ function App() {
       let password: string = localStorage.getItem("password")+""
       let auth = await Authenticate(password)
 
-      if(auth != "") {
+      if(typeof auth === "object") {
+        setUserInfo(auth)
+      } else {
         toast.error(`Please authenticate before using the site.`)
         setRequiresAuth(true)
       }
@@ -30,7 +34,7 @@ function App() {
         state == null ? <>State is null</> : 
         Object.entries(state.servers)
         .map(([name, serverState]) => {
-          return <Server key={name} name={name} serverState={serverState} />
+          return <Server key={name} name={name} serverState={serverState} userInfo={userInfo}/>
         })
       }
     </>
@@ -61,10 +65,11 @@ function AuthenticationWindow() {
   </>
 }
 
-function Server({name, serverState}: {name: string, serverState: ServerState}): JSX.Element {
+function Server({name, serverState, userInfo}: {name: string, serverState: ServerState, userInfo: UserInfo}): JSX.Element {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
 
   useEffect(() => {
+    setTimeRemaining(serverState.endsAt - new Date().getTime() / 1000)
     const interval = setInterval(() => {
       setTimeRemaining(serverState.endsAt - new Date().getTime() / 1000)
     }, 1000)
@@ -76,8 +81,15 @@ function Server({name, serverState}: {name: string, serverState: ServerState}): 
     <label className="serverName">{name.charAt(0).toUpperCase() + name.slice(1)}</label>
     <label className="serverStatus"> {timeRemaining < 0 ? "Server is off" : `${formatTime(timeRemaining)}`}</label>
     <div className="serverButtonContainer">
-      <button className="stopButton" onClick={() => serverAction(name, "stop")}>Stop</button>
-      <button className="serverButton" onClick={() => serverAction(name, timeRemaining < 0 ? "start" : "extend")}>{timeRemaining < 0 ? "Start" : "Extend"}</button>
+      { timeRemaining > 0 && userInfo.canStop ?
+        <button className="stopButton" onClick={() => serverAction(name, "stop")}>Stop</button> : <></>
+      }
+      { timeRemaining > 0  && userInfo.canExtend ?
+        <button className="serverButton" onClick={() => serverAction(name, "extend")}>Extend</button> : <></>
+      }
+      { timeRemaining <= 0 && userInfo.canStart ?
+        <button className="serverButton" onClick={() => serverAction(name, "start")}>Start</button> : <></>
+      }
     </div>
   </div>
 
