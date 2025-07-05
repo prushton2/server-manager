@@ -142,14 +142,15 @@ func ValidateConfig(config Config) error {
 	return nil
 }
 
-func CheckAuth(password string) (UserInfo, error) {
+func GetAuth(password string) (UserInfo, error) {
 	for name, info := range config.Users {
 		if info.Password == password {
 			user := UserInfo{
-				name:      name,
-				CanStart:  info.CanStart,
-				CanExtend: info.CanExtend,
-				CanView:   info.CanView,
+				name:           name,
+				CanStart:       info.CanStart,
+				CanExtend:      info.CanExtend,
+				CanStop:        info.CanStop,
+				AllowedServers: info.AllowedServers,
 			}
 			return user, nil
 		}
@@ -171,5 +172,23 @@ func ValidateUser(r *http.Request) (UserInfo, error) {
 		return UserInfo{}, fmt.Errorf("Body is not valid JSON")
 	}
 
-	return CheckAuth(parsedBody.Password)
+	return GetAuth(parsedBody.Password)
+}
+
+func HasAuth(user UserInfo, server string, action string) bool {
+
+	for _, allowed := range user.AllowedServers {
+		if allowed == server {
+			switch action {
+			case "start":
+				return user.CanStart
+			case "extend":
+				return user.CanExtend
+			case "stop":
+				return user.CanStop
+			}
+		}
+	}
+
+	return false
 }

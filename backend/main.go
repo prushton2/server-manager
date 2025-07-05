@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -32,21 +32,21 @@ func status(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userInfo, err := ValidateUser(r)
-
-	if !userInfo.CanView {
-		http.Error(w, "User lacks permission to view", http.StatusForbidden)
-		return
-	}
-
-	file, err := os.Open("state.json")
 	if err != nil {
-		http.Error(w, "Could not open state.json", http.StatusInternalServerError)
+		http.Error(w, "Invalid Password", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+
+	filteredState := State{Servers: make(map[string]ServerState)}
+
+	for _, visibleServer := range userInfo.AllowedServers {
+		filteredState.Servers[visibleServer] = state.Servers[visibleServer]
+	}
+
+	data, err := json.Marshal(filteredState)
 
 	w.Header().Set("Content-Type", "application/json")
-	io.Copy(w, file)
+	io.Writer.Write(w, data)
 
 }
 
@@ -87,9 +87,18 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var command = strings.Split(r.URL.String(), "/")
-	if command[0] == "" {
-		command = command[1:]
+	var url = strings.Split(r.URL.String(), "/")
+	if url[0] == "" {
+		url = url[1:]
+	}
+	//command (start, stop, extend); server (satisfactory, minecraft)
+	var command = url[2]
+	var server = url[1]
+
+	if !HasAuth(UserInfo, server, command) {
+		http.Error(w, "Missing permission", http.StatusForbidden)
+		io.WriteString(w, "")
+		return
 	}
 
 	if len(command) < 3 {
@@ -100,11 +109,13 @@ func server(w http.ResponseWriter, r *http.Request) {
 
 	// var err error
 
-	switch command[2] {
+	switch command {
 	case "start":
-		err = startServer(command[1], UserInfo)
+		err = startServer(server)
 	case "extend":
-		err = extendServer(command[1], UserInfo)
+		err = extendServer(server)
+	case "stop":
+		err = stopServer(server)
 	default:
 		http.Error(w, "Provide a valid command (start, extend)", http.StatusBadRequest)
 		io.WriteString(w, "")
@@ -117,16 +128,12 @@ func server(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("%s: command: %s: %s\n", UserInfo.name, command[2], command[1])
+	fmt.Printf("%s: command: %s: %s\n", UserInfo.name, command, server)
 
 	io.WriteString(w, "")
 }
 
-func startServer(name string, userInfo UserInfo) error {
-	if !userInfo.CanStart {
-		return fmt.Errorf("User lacks permission to start server")
-	}
-
+func startServer(name string) error {
 	now := time.Now().Unix()
 	serverConfig, exists := config.Servers[name]
 
@@ -163,11 +170,7 @@ func startServer(name string, userInfo UserInfo) error {
 	return nil
 }
 
-func extendServer(name string, userInfo UserInfo) error {
-	if !userInfo.CanExtend {
-		return fmt.Errorf("User lacks permission to extend server")
-	}
-
+func extendServer(name string) error {
 	serverConfig, exists := config.Servers[name]
 
 	if !exists {
@@ -195,6 +198,37 @@ func extendServer(name string, userInfo UserInfo) error {
 
 	serverState.EndsAt += timeToExtendBy
 	serverState.Extensions = append(serverState.Extensions, timeToExtendBy)
+
+	stateMutex.Lock()
+	state.Servers[name] = serverState
+	stateMutex.Unlock()
+
+	SaveState()
+	return nil
+}
+
+func stopServer(name string) error {
+	_, exists := config.Servers[name]
+
+	if !exists {
+		return fmt.Errorf("Invalid server name")
+	}
+
+	stateMutex.Lock()
+	serverState, exists := state.Servers[name]
+	stateMutex.Unlock()
+
+	if !exists {
+		return fmt.Errorf("Server state not declared, try starting the server.")
+	}
+
+	if serverState.EndsAt <= time.Now().Unix() {
+		return fmt.Errorf("Server is off")
+	}
+
+	serverState.EndsAt = 0
+	serverState.StartedAt = 0
+	serverState.Extensions = make([]int64, 0)
 
 	stateMutex.Lock()
 	state.Servers[name] = serverState
