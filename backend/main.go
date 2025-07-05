@@ -18,7 +18,7 @@ var state State = State{
 
 var config Config
 
-// this prevents docker compose up/down commands from being run at the same time
+// this prevents docker compose up/down commands from being run at the same time since the manager is invoked by both the goroutine and the start/stop endpoints
 var containerManagerMutex sync.RWMutex
 
 func status(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +40,10 @@ func status(w http.ResponseWriter, r *http.Request) {
 	filteredState := State{Servers: make(map[string]ServerState)}
 
 	for _, visibleServer := range userInfo.AllowedServers {
-		filteredState.Servers[visibleServer] = state.Servers[visibleServer]
+		server, exists := state.Servers[visibleServer]
+		if exists {
+			filteredState.Servers[visibleServer] = server
+		}
 	}
 
 	data, err := json.Marshal(filteredState)
