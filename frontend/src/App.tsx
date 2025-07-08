@@ -6,6 +6,7 @@ import { toast } from "react-fox-toast"
 import type { UserInfo } from './models/User'
 import Ribbon from './components/Ribbon'
 import AuthenticationWindow from './components/AuthenticationWIndow'
+import { PromptContainer, prompt } from './components/Prompt'
 
 function App() {
   const [state, setState] = useState<State | null>(null)
@@ -14,10 +15,10 @@ function App() {
 
   useEffect(() => {
     async function init() {
-      let password: string = localStorage.getItem("password")+""
+      let password: string = localStorage.getItem("password") + ""
       let auth = await Authenticate(password)
 
-      if(typeof auth === "object") {
+      if (typeof auth === "object") {
         setUserInfo(auth)
       } else {
         toast.error(`Please authenticate before using the site.`)
@@ -39,12 +40,14 @@ function App() {
     }
 
     return Object.entries(state.servers).map(([name, serverState]) => {
-        return <Server key={name} name={name} serverState={serverState} userInfo={userInfo}/>
-      })
+      return <Server key={name} name={name} serverState={serverState} userInfo={userInfo} />
+    }
+    )
   }
-  
+
   return (
     <>
+      <PromptContainer />
       <Ribbon userInfo={userInfo} />
       {requiresAuth ? <AuthenticationWindow /> : renderState()}
     </>
@@ -53,7 +56,7 @@ function App() {
 
 export default App
 
-function Server({name, serverState, userInfo}: {name: string, serverState: ServerState, userInfo: UserInfo}): JSX.Element {
+function Server({ name, serverState, userInfo }: { name: string, serverState: ServerState, userInfo: UserInfo }): JSX.Element {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
 
   useEffect(() => {
@@ -63,20 +66,31 @@ function Server({name, serverState, userInfo}: {name: string, serverState: Serve
     }, 1000)
     return () => clearInterval(interval)
   }, [])
-  // @ts-ignore is it really this dumb? its not my fault theres no real int type
 
   return <div className="serverDiv">
     <label className="serverName">{name.charAt(0).toUpperCase() + name.slice(1)}</label>
     <label className="serverStatus"> {timeRemaining < 0 ? "Server is off" : `${formatTime(timeRemaining)}`}</label>
     <div className="serverButtonContainer">
-      { timeRemaining > 0 && userInfo.canStop ?
-        <button className="stopButton" onClick={() => serverAction(name, "stop")}>Stop</button> : <></>
+      {timeRemaining > 0 && userInfo.canStop ?
+        <button className="stopButton" onClick={async () => {
+          if (await prompt.show("Confirm", "Are you sure you want to stop the server?", "Stop", "Cancel")) {
+            serverAction(name, "stop")
+          }
+        }}>Stop</button> : <></>
       }
-      { timeRemaining > 0  && userInfo.canExtend ?
-        <button className="serverButton" onClick={() => serverAction(name, "extend")}>Extend</button> : <></>
+      {timeRemaining > 0 && userInfo.canExtend ?
+        <button className="serverButton" onClick={async () => {
+          if (await prompt.show("Confirm", "Are you sure you want to extend the server?", "Extend", "Cancel")) {
+            serverAction(name, "extend")
+          }
+        }}>Extend</button> : <></>
       }
-      { timeRemaining <= 0 && userInfo.canStart ?
-        <button className="serverButton" onClick={() => serverAction(name, "start")}>Start</button> : <></>
+      {timeRemaining <= 0 && userInfo.canStart ?
+        <button className="serverButton" onClick={async() => {
+          if (await prompt.show("Confirm", "Are you sure you want to start the server?", "Start", "Cancel")) {
+            serverAction(name, "start")
+          }
+        }}>Start</button> : <></>
       }
     </div>
   </div>
@@ -87,11 +101,11 @@ function formatTime(time: number): string {
   // @ts-ignore
   let seconds = parseInt(time % 60)
   // @ts-ignore
-  let minutes = parseInt((time / 60)%60)
+  let minutes = parseInt((time / 60) % 60)
   // @ts-ignore
-  let hours =   parseInt((time / 60 / 60)%60)
+  let hours = parseInt((time / 60 / 60) % 60)
   // @ts-ignore
-  let days =    parseInt((time / 60 / 60 / 24))
+  let days = parseInt((time / 60 / 60 / 24))
 
   let secondsStr = String(seconds).padStart(2, '0')
   let minutesStr = String(minutes).padStart(2, '0')
@@ -102,11 +116,11 @@ function formatTime(time: number): string {
 }
 
 async function serverAction(name: string, action: string) {
-  let password: string = localStorage.getItem("password")+""
+  let password: string = localStorage.getItem("password") + ""
 
   let response = await Action(name, password, action)
 
-  if(response == "") {
+  if (response == "") {
     window.location.reload()
   } else {
     toast.error(`Error: ${response}`)

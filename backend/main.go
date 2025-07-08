@@ -195,7 +195,7 @@ func extendServer(name string) error {
 	}
 
 	if serverState.EndsAt-maxTimeLeftBeforeExtended > time.Now().Unix() {
-		return fmt.Errorf("Server has too much time remaining to extend")
+		return fmt.Errorf("Server has too much time remaining to extend, the server can be extended when below %s", serverConfig.MaxTimeBeforeExtend)
 	}
 
 	if len(serverState.Extensions) >= serverConfig.MaxExtensions && serverConfig.MaxExtensions != -1 {

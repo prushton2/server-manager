@@ -10,6 +10,8 @@
   margin: 0 auto;
   padding: 2rem; 
   text-align: center;
+  color: var(--text);
+
 
   @media (pointer:none), (pointer:coarse) {
     padding: 0;
