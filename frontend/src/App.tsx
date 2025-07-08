@@ -1,5 +1,5 @@
 import './App.css'
-import { useEffect, useRef, useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import type { ServerState, State } from './models/State'
 import { Action, Authenticate, GetState } from './API'
 import { toast } from "react-fox-toast"
