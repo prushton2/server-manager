@@ -135,6 +135,9 @@ func server(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("%s: command: %s: %s\n", UserInfo.Name, command, server)
 
+	// run this asynchronously so it responds faster
+	go manageDockerContainers()
+
 	io.WriteString(w, "")
 }
 
@@ -143,23 +146,20 @@ func startServer(name string) error {
 	serverConfig, exists := config.Servers[name]
 
 	if !exists {
-		return fmt.Errorf("Invalid server name")
+		return fmt.Errorf("Invalid server name %s", name)
+	}
+
+	if CountActiveServers() >= config.Config.MaxServers && config.Config.MaxServers != -1 {
+		return fmt.Errorf("The maximum number of active servers has been reached (%d)", config.Config.MaxServers)
 	}
 
 	// this cant error since the input was validated already
 	serverTTL, _ := DecodeTime(serverConfig.InitialTTL)
 
-	// Get the number of started servers and check if its at or above cap
-
 	stateMutex.Lock()
 	serverState, exists := state.Servers[name]
-
 	if !exists {
-		serverState = types.ServerState{
-			StartedAt:  0,
-			Extensions: make([]int64, 0),
-			EndsAt:     0,
-		}
+		return fmt.Errorf("Server state for %s not declared, ensure the server is properly declared in config", name)
 	}
 
 	serverState.StartedAt = now
@@ -169,9 +169,6 @@ func startServer(name string) error {
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
 
-	// do the starting of the server
-	manageDockerContainers()
-
 	SaveState()
 	return nil
 }
@@ -180,7 +177,7 @@ func extendServer(name string) error {
 	serverConfig, exists := config.Servers[name]
 
 	if !exists {
-		return fmt.Errorf("Invalid server name")
+		return fmt.Errorf("Invalid server name %s", name)
 	}
 
 	maxTimeLeftBeforeExtended, _ := DecodeTime(serverConfig.MaxTimeBeforeExtend)
@@ -191,15 +188,15 @@ func extendServer(name string) error {
 	stateMutex.Unlock()
 
 	if !exists {
-		return fmt.Errorf("Server state not declared, try starting the server.")
+		return fmt.Errorf("Server state for %s not declared, ensure the server is properly declared in config", name)
 	}
 
 	if serverState.EndsAt-maxTimeLeftBeforeExtended > time.Now().Unix() {
-		return fmt.Errorf("Server has too much time remaining to extend, the server can be extended when below %s", serverConfig.MaxTimeBeforeExtend)
+		return fmt.Errorf("%s server has too much time remaining to extend, the server can be extended when below %s", name, serverConfig.MaxTimeBeforeExtend)
 	}
 
 	if len(serverState.Extensions) >= serverConfig.MaxExtensions && serverConfig.MaxExtensions != -1 {
-		return fmt.Errorf("Server has been extended the maximum number of times for this reboot")
+		return fmt.Errorf("%s server has been extended the maximum number of times for this reboot", name)
 	}
 
 	serverState.EndsAt += timeToExtendBy
@@ -217,7 +214,7 @@ func stopServer(name string) error {
 	_, exists := config.Servers[name]
 
 	if !exists {
-		return fmt.Errorf("Invalid server name")
+		return fmt.Errorf("Invalid server name %s", name)
 	}
 
 	stateMutex.Lock()
@@ -225,11 +222,11 @@ func stopServer(name string) error {
 	stateMutex.Unlock()
 
 	if !exists {
-		return fmt.Errorf("Server state not declared, try starting the server.")
+		return fmt.Errorf("Server state for %s not declared, ensure the server is properly declared in config", name)
 	}
 
 	if serverState.EndsAt <= time.Now().Unix() {
-		return fmt.Errorf("Server is off")
+		return fmt.Errorf("%s server is off", name)
 	}
 
 	serverState.EndsAt = 0
@@ -239,9 +236,6 @@ func stopServer(name string) error {
 	stateMutex.Lock()
 	state.Servers[name] = serverState
 	stateMutex.Unlock()
-
-	// do the stopping of the server
-	manageDockerContainers()
 
 	SaveState()
 	return nil
