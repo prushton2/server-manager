@@ -149,10 +149,12 @@ func startServer(name string) error {
 		return fmt.Errorf("Invalid server name %s", name)
 	}
 
+	if CountActiveServers() >= config.Config.MaxServers && config.Config.MaxServers != -1 {
+		return fmt.Errorf("The maximum number of active servers has been reached (%d)", config.Config.MaxServers)
+	}
+
 	// this cant error since the input was validated already
 	serverTTL, _ := DecodeTime(serverConfig.InitialTTL)
-
-	// Get the number of started servers and check if its at or above cap
 
 	stateMutex.Lock()
 	serverState, exists := state.Servers[name]

@@ -7,6 +7,7 @@ import (
 	"os"
 	"server-manager/types"
 	"strconv"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -146,4 +147,16 @@ func ValidateConfig(config types.Config) error {
 	}
 
 	return nil
+}
+
+func CountActiveServers() int {
+	now := time.Now().Unix()
+	activeServers := 0
+	for _, server := range state.Servers {
+		if server.EndsAt > now {
+			activeServers++
+		}
+	}
+
+	return activeServers
 }
