@@ -50,25 +50,31 @@ func LoadState(config types.Config) {
 		return
 	}
 
-	err = json.Unmarshal(body, &state)
+	var newState types.State = types.State{Servers: make(map[string]types.ServerState)}
+	var oldState types.State
+
+	err = json.Unmarshal(body, &oldState)
 	if err != nil {
 		fmt.Println("Error umarshalling state json, resetting: ", err)
-		fmt.Println("Please take down any currently running servers, they will be orphaned from the new state object")
-
-		state = types.State{
+		oldState = types.State{
 			Servers: make(map[string]types.ServerState),
 		}
+	}
 
-		for name := range config.Servers {
-			state.Servers[name] = types.ServerState{
+	for name := range config.Servers {
+		old, exists := oldState.Servers[name]
+		if exists {
+			newState.Servers[name] = old
+		} else {
+			newState.Servers[name] = types.ServerState{
 				StartedAt:  0,
 				Extensions: make([]int64, 0),
 				EndsAt:     0,
 			}
 		}
-
-		return
 	}
+
+	state = newState
 
 	fmt.Println("Successfully loaded state")
 }
