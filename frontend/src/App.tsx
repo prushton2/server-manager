@@ -71,26 +71,9 @@ function Server({ name, serverState, userInfo }: { name: string, serverState: Se
     <label className="serverName">{name.charAt(0).toUpperCase() + name.slice(1)}</label>
     <label className="serverStatus"> {timeRemaining < 0 ? "Server is off" : `${formatTime(timeRemaining)}`}</label>
     <div className="serverButtonContainer">
-      {timeRemaining > 0 && userInfo.canStop ?
-        <button className="stopButton" onClick={async () => {
-          if (await prompt.show("Confirm", "Are you sure you want to stop the server?", "Stop", "Cancel")) {
-            serverAction(name, "stop")
-          }
-        }}>Stop</button> : <></>
-      }
-      {timeRemaining > 0 && userInfo.canExtend ?
-        <button className="serverButton" onClick={async () => {
-          if (await prompt.show("Confirm", "Are you sure you want to extend the server?", "Extend", "Cancel")) {
-            serverAction(name, "extend")
-          }
-        }}>Extend</button> : <></>
-      }
-      {timeRemaining <= 0 && userInfo.canStart ?
-        <button className="serverButton" onClick={async() => {
-          if (await prompt.show("Confirm", "Are you sure you want to start the server?", "Start", "Cancel")) {
-            serverAction(name, "start")
-          }
-        }}>Start</button> : <></>
+      {serverState.status == "enabled" ?
+        renderServerActionButtons(timeRemaining, userInfo, name) :
+        renderServerStatusLabel(serverState.status)
       }
     </div>
   </div>
@@ -125,4 +108,40 @@ async function serverAction(name: string, action: string) {
   } else {
     toast.error(`Error: ${response}`)
   }
+}
+
+function renderServerActionButtons(timeRemaining: number, userInfo: UserInfo, name: string): JSX.Element {
+  return <>
+    {timeRemaining > 0 && userInfo.canStop ?
+      <button className="stopButton" onClick={async () => {
+        if (await prompt.show("Confirm", "Are you sure you want to stop the server?", "Stop", "Cancel")) {
+          serverAction(name, "stop")
+        }
+      }}>Stop</button> : <></>
+    }
+    {timeRemaining > 0 && userInfo.canExtend ?
+      <button className="serverButton" onClick={async () => {
+        if (await prompt.show("Confirm", "Are you sure you want to extend the server?", "Extend", "Cancel")) {
+          serverAction(name, "extend")
+        }
+      }}>Extend</button> : <></>
+    }
+    {timeRemaining <= 0 && userInfo.canStart ?
+      <button className="serverButton" onClick={async () => {
+        if (await prompt.show("Confirm", "Are you sure you want to start the server?", "Start", "Cancel")) {
+          serverAction(name, "start")
+        }
+      }}>Start</button> : <></>
+    }
+  </>
+}
+
+function renderServerStatusLabel(status: string): JSX.Element {
+  switch (status) {
+    case "disabled":
+      return <a className='disabledServerMessage'>Server is disabled</a>
+    case "maintenance":
+      return <a className='maintenanceServerMessage'>Server is down for maintenance</a>
+  }
+  return <></>
 }
