@@ -27,6 +27,7 @@ servers:
       # Status of the server
       #   enabled: working properly
       #   maintenance: backend will not try to start/stop server, and a message will be shown to users
+      #   disabled: same as maintenance, but will say "server is disabled" instead of "server is temporarily down for maintenance"
       #   hidden: backend will not try to start/stop server, and server will be hidden from users
       status: "enabled"
 

@@ -9,7 +9,7 @@ import (
 	"server-manager/types"
 )
 
-// Given a config, get the associated user with this password
+// Given a config and password, get the associated user
 func GetAuth(password string, config types.Config) (types.UserInfo, error) {
 	for name, info := range config.Users {
 		if info.Password == password {
@@ -47,8 +47,10 @@ func ValidateUser(r *http.Request, config types.Config) (types.UserInfo, error) 
 // Does this user have the correct auth to do this action on this server
 func HasAuth(user types.UserInfo, server string, action string) bool {
 
+	// is the server the user wants to modify in their allowed servers?
 	for _, allowed := range user.AllowedServers {
 		if allowed == server {
+			// can they perform the action?
 			switch action {
 			case "start":
 				return user.CanStart

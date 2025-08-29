@@ -1,8 +1,8 @@
 # Endpoints
 
-## GET /server/{name}/start
+## POST /server/{name}/start
 Starts the server
-## GET /server/{name}/extend
+## POST /server/{name}/extend
 Extends the server time
-## GET /status
+## POST /status
 Gets status of all servers
