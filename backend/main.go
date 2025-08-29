@@ -46,7 +46,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 		serverState, stateExists := state.Servers[visibleServer]
 		serverConfig, configExists := config.Servers[visibleServer]
 
-		if stateExists && configExists {
+		if stateExists && configExists && serverConfig.Status != "hidden" {
 			filteredState.Servers[visibleServer] = types.StatusResponseServerInfo{
 				StartedAt:  serverState.StartedAt,
 				EndsAt:     serverState.EndsAt,
