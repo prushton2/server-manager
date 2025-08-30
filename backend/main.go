@@ -290,6 +290,10 @@ func manageDockerContainers() {
 			continue
 		}
 
+		if serverConfig.Status != "enabled" {
+			continue
+		}
+
 		// fmt.Println("Name: ", name)
 
 		cmd := exec.Command("docker", "compose", "ps", "--format", "{{json .}}")
