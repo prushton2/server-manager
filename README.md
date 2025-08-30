@@ -6,20 +6,42 @@ The file `backend/config.yaml` allows you to define, in yaml, the properties of 
 
 ```yaml
 servers:
-    satisfactory:
-        directory: "/home/user/containers/satisfactory"
-        initialTTL: "24h" # when started, how long before automatic shutdown.
-        extendedTTL: "6h" # when extended, how much time to add
-        maxTimeBeforeExtend: "3h" #the maximum time left on the server before its life can be extended (i.e. you can only extend this servers TTL when it has less than 3 hours left)
-        maxExtensions: 2 # Maximum number of times the servers TTL can be extended
-    minecraft:
-        directory: "/home/user/containers/minecraft"
-        initialTTL: "1w" # accepts h, d, w, m for hours, days, weeks, months
-        extendedTTL: "3d"
-        maxTimeBeforeExtend: "1d"
-        maxExtensions: -1 # -1 means infinite extensions allowed
+  satisfactory:
+      # Directory of the container (this is the directory mounted in the server-manager docker container)
+      directory: "/home/user/containers/satisfactory"
+      
+      # When started, how long before automatic shutdown. 
+      #  All time strings accept h, d, w, m for hours, days, weeks, months
+      initialTTL: "24h"
+      
+      # When extended, how much time to add
+      extendedTTL: "6h"
+      
+      # The maximum time left on the server before its life can be extended (i.e. you can only extend this servers TTL when it has less than 3 hours left)
+      maxTimeBeforeExtend: "3h" 
+      
+      # Maximum number of times the servers TTL can be extended
+      #  -1 allows for infinite extensions
+      maxExtensions: 2 
+      
+      # Status of the server
+      #   enabled: working properly
+      #   maintenance: backend will not try to start/stop server, and a message will be shown to users
+      #   disabled: same as maintenance, but will say "server is disabled" instead of "server is temporarily down for maintenance"
+      #   hidden: backend will not try to start/stop server, and server will be hidden from users
+      status: "enabled"
+
+  minecraft:
+      directory: "/home/user/containers/minecraft"
+      initialTTL: "1w"
+      extendedTTL: "3d"
+      maxTimeBeforeExtend: "1d"
+      maxExtensions: -1
+      status: "maintenance"
+
 config:
-    maxServers: 1 # max number of servers that can be online at once.
+  # max number of servers that can be online at once.
+  maxServers: 1 
 
 users:
   root: # Username for logging purposes 

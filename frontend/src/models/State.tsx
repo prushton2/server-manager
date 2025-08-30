@@ -6,4 +6,5 @@ export interface ServerState {
     startedAt: number;
     extensions: number[];
     endsAt: number;
+    status: string;
 }

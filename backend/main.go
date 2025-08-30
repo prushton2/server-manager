@@ -23,6 +23,7 @@ var config types.Config
 // this prevents docker compose up/down commands from being run at the same time since the manager is invoked by both the goroutine and the start/stop endpoints
 var containerManagerMutex sync.RWMutex
 
+// endpoint to get the status of servers
 func status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -39,12 +40,19 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filteredState := types.State{Servers: make(map[string]types.ServerState)}
+	filteredState := types.StatusResponse{Servers: make(map[string]types.StatusResponseServerInfo)}
 
 	for _, visibleServer := range userInfo.AllowedServers {
-		server, exists := state.Servers[visibleServer]
-		if exists {
-			filteredState.Servers[visibleServer] = server
+		serverState, stateExists := state.Servers[visibleServer]
+		serverConfig, configExists := config.Servers[visibleServer]
+
+		if stateExists && configExists && serverConfig.Status != "hidden" {
+			filteredState.Servers[visibleServer] = types.StatusResponseServerInfo{
+				StartedAt:  serverState.StartedAt,
+				EndsAt:     serverState.EndsAt,
+				Extensions: serverState.Extensions,
+				Status:     serverConfig.Status,
+			}
 		}
 	}
 
@@ -55,6 +63,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// authenticate user
 func authenticate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -77,22 +86,26 @@ func authenticate(w http.ResponseWriter, r *http.Request) {
 	io.Writer.Write(w, str)
 }
 
+// endpoint to interact with server (start, stop, etc)
 func server(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
+	// handle options requests
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
+	// check auth
 	UserInfo, err := auth.ValidateUser(r, config)
 	if err != nil {
 		http.Error(w, "Invalid Authentication", http.StatusForbidden)
 		return
 	}
 
+	// split up url
 	var url = strings.Split(r.URL.String(), "/")
 	if url[0] == "" {
 		url = url[1:]
@@ -108,8 +121,23 @@ func server(w http.ResponseWriter, r *http.Request) {
 	var command = url[2]
 	var server = url[1]
 
+	// check users permissions to do the requested action
 	if !auth.HasAuth(UserInfo, server, command) {
 		http.Error(w, "Missing permission", http.StatusForbidden)
+		io.WriteString(w, "")
+		return
+	}
+
+	// check the server's status
+	serverConfig, exists := config.Servers[server]
+	if !exists {
+		http.Error(w, "Server config not properly defined, contact server administrator", http.StatusInternalServerError)
+		io.WriteString(w, "")
+		return
+	}
+
+	if serverConfig.Status != "enabled" {
+		http.Error(w, "Server is not enabled", http.StatusForbidden)
 		io.WriteString(w, "")
 		return
 	}
@@ -141,6 +169,7 @@ func server(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "")
 }
 
+// start a server
 func startServer(name string) error {
 	now := time.Now().Unix()
 	serverConfig, exists := config.Servers[name]

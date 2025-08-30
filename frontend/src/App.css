@@ -8,12 +8,13 @@
   /* height: 100%; */
   width: 100%;
   margin: 0 auto;
-  padding: 2rem; 
+  padding: 2rem;
   text-align: center;
   color: var(--text);
 
 
-  @media (pointer:none), (pointer:coarse) {
+  @media (pointer:none),
+  (pointer:coarse) {
     padding: 0;
   }
 }
@@ -32,7 +33,8 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 60%;
 
-  @media (pointer:none), (pointer:coarse) {
+  @media (pointer:none),
+  (pointer:coarse) {
     flex-direction: column;
     width: 100%;
     margin-bottom: 20px;
@@ -55,7 +57,7 @@
   flex-basis: 0%;
 
   align-items: center;
-  
+
   color: var(--text-muted);
   font-size: x-large;
 }
@@ -66,7 +68,7 @@
   flex-basis: 0%;
 
   justify-content: right;
-  
+
   font-size: xx-large;
 }
 
@@ -85,7 +87,7 @@
 
 .serverButton:active {
   background-color: var(--green-dark);
-  box-shadow: 0 1px 2px rgba(0,0,0,0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0);
 }
 
 .stopButton {
@@ -103,10 +105,28 @@
 
 .stopButton:active {
   background-color: var(--red-dark);
-  box-shadow: 0 1px 2px rgba(0,0,0,0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0);
 }
 
 .lineBreak {
   flex-basis: 100%;
   height: 0;
+}
+
+.disabledServerMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: large;
+  color: red;
+}
+
+.maintenanceServerMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  font-size: large;
+  color: CornflowerBlue;
 }

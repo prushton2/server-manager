@@ -1,5 +1,6 @@
 package types
 
+// Config structs
 type Config struct {
 	Servers map[string]ServerConfig `yaml:"servers"`
 	Config  struct {
@@ -14,6 +15,7 @@ type ServerConfig struct {
 	ExtendedTTL         string `yaml:"extendedTTL"`
 	MaxTimeBeforeExtend string `yaml:"maxTimeBeforeExtend"`
 	MaxExtensions       int    `yaml:"maxExtensions"`
+	Status              string `yaml:"status"`
 }
 
 type UserConfig struct {
@@ -24,6 +26,7 @@ type UserConfig struct {
 	AllowedServers []string `yaml:"allowedServers"`
 }
 
+// State structs
 type State struct {
 	Servers map[string]ServerState `json:"servers"`
 }
@@ -44,4 +47,19 @@ type UserInfo struct {
 	CanExtend      bool     `json:"canExtend"`
 	CanStop        bool     `json:"canStop"`
 	AllowedServers []string `json:"allowedServers"`
+}
+
+// Status endpoint response
+//
+//	Single server info struct
+type StatusResponseServerInfo struct {
+	StartedAt  int64   `json:"startedAt"`
+	Extensions []int64 `json:"extensions"`
+	EndsAt     int64   `json:"endsAt"`
+	Status     string  `json:"status"`
+}
+
+// Status Response
+type StatusResponse struct {
+	Servers map[string]StatusResponseServerInfo `json:"servers"`
 }
